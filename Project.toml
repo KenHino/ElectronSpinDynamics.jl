@@ -1,0 +1,13 @@
+name = "ElectronSpinDynamics"
+uuid = "aa68f387-e3bf-4208-a9fa-5f722d68c8a5"
+authors = ["Kentaro Hino"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1.11"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
