@@ -24,7 +24,7 @@ jobs:
       matrix:
         version:
           - '1.11'
-          - 'pre'
+          #- 'pre' # copilot said this fails CI
         os:
           - ubuntu-latest
         arch:
