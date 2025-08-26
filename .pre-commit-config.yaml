@@ -1,0 +1,29 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # - id: no-commit-to-branch
+      #  args: [--branch, main]
+      - id: check-added-large-files
+        args: ['--maxkb=50']
+      - id: check-docstring-first
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  # Julia formatter
+  - repo: https://github.com/domluna/JuliaFormatter.jl
+    rev: v1.0.62
+    hooks:
+      - id: julia-formatter
+
+  # Julia tests
+  - repo: local
+    hooks:
+      - id: julia-test
+        name: Run Julia tests
+        entry: julia --project=. -e "using Pkg; Pkg.test(); Pkg.test(\"ElectronSpinDynamics\")"
+        language: system
+        files: \.(jl)$
+        pass_filenames: false

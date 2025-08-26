@@ -9,17 +9,52 @@ export ℏ, μ0, γe, γ1H, γ14N, g_electron
 include("utils.jl")
 using .Utils
 
+include("spinops.jl")
+using .SpinOps
+
+export σx,
+    σy,
+    σz,
+    Sx,
+    Sy,
+    Sz,
+    Sp,
+    Sm,
+    ST,
+    ST_basis,
+    Sx1,
+    Sx2,
+    Sy1,
+    Sy2,
+    Sz1,
+    Sz2,
+    Ps,
+    Pt,
+    Pt0,
+    Ptp,
+    Ptm
 
 include("molecule.jl")
+using .MoleculeModule
 
 export Molecule, read_molecule
 
 include("system.jl")
-
+using .SystemModule
 export System, read_system
 
 include("simparam.jl")
-
+using .SimParamModule
 export SimParams, read_simparams
+
+include("hamiltonian.jl")
+using .Hamiltonian
+
+export system_hamiltonian,
+    zeeman_hamiltonian, exchange_hamiltonian, dipolar_hamiltonian, haberkorn_hamiltonian
+
+include("liouvillian.jl")
+using .Liouvillian
+export liouvillian, vectorise, linearise, normalise, trace
 
 end

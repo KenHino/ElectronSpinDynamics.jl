@@ -1,14 +1,14 @@
 # utils.jl ---------------------------------------------------------------
-# Lightweight helpers shared across the package.                       
-# Placed in a tiny sub‑module so it is included exactly **once**,       
-# avoiding duplicate definitions during precompilation.                
+# Lightweight helpers shared across the package.
+# Placed in a tiny sub‑module so it is included exactly **once**,
+# avoiding duplicate definitions during precompilation.
 # --------------------------------------------------------------------
 
 module Utils
 
 using StaticArrays
 
-export vecparse, mat3, mat3static
+export vecparse, mat3, mat3static, clean!
 
 """
     vecparse(T, s::AbstractString) → Vector{T}
@@ -20,8 +20,7 @@ requested numeric type `T` (e.g. `Float64`, `Int`).
 vecparse(Int, "1 2 3")  # == [1, 2, 3]
 ```
 """
-vecparse(::Type{T}, s::AbstractString) where {T} =
-    parse.(T, split(strip(s)))
+vecparse(::Type{T}, s::AbstractString) where {T} = parse.(T, split(strip(s)))
 
 """
     mat3(s::AbstractString) → Matrix{Float64}
@@ -40,7 +39,31 @@ mat3(s::AbstractString) = reshape(vecparse(Float64, s), 3, 3)
 Same as [`mat3`](@ref) but returns a stack‑allocated `SMatrix` from
 StaticArrays.jl for maximum performance in tight inner loops.
 """
-mat3static(s::AbstractString) = SMatrix{3,3}(mat3(s))
+mat3static(s::AbstractString) = SMatrix{3, 3}(mat3(s))
+
+"""
+    clean!(M::AbstractMatrix)
+
+Set all elements of `M` to zero if they are less than 1e-15.
+"""
+function clean!(M::AbstractMatrix)
+    for i in axes(M, 1), j in axes(M, 2)
+        if abs(M[i, j]) < 1e-15
+            M[i, j] = 0.0
+        elseif abs(M[i, j] - 0.5) < 1e-15
+            M[i, j] = 0.5
+        elseif abs(M[i, j] + 0.5) < 1e-15
+            M[i, j] = -0.5
+        elseif abs(M[i, j] - √2/4) < 1e-15
+            M[i, j] = √2/4
+        elseif abs(M[i, j] + √2/4) < 1e-15
+            M[i, j] = -√2/4
+        elseif abs(M[i, j] - √2/4im) < 1e-15
+            M[i, j] = √2/4im
+        elseif abs(M[i, j] + √2/4im) < 1e-15
+            M[i, j] = -√2/4im
+        end
+    end
+end
 
 end # module
-
