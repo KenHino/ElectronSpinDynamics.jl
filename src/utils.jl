@@ -26,7 +26,7 @@ vecparse(::Type{T}, s::AbstractString) where {T} = parse.(T, split(strip(s)))
     mat3(s::AbstractString) → Matrix{Float64}
 
 Interpret the nine whitespace‑separated numbers in `s` as *row‑major* data
-for a 3 × 3 tensor and return a regular `Matrix{Float64}`.
+for a 3 × 3 tensor and return a regular `Matrix{Float64}`.
 
 The transpose at the end converts from the row‑major order used in most
 text files to Julia/Fortran column‑major storage.
@@ -64,6 +64,12 @@ function clean!(M::AbstractMatrix)
             M[i, j] = -√2/4im
         end
     end
+end
+
+function clean(M::SMatrix{N, N, T}) where {N, T}
+    M_mut = Matrix(M)
+    clean!(M_mut)
+    return SMatrix{N, N, T}(M_mut)
 end
 
 end # module

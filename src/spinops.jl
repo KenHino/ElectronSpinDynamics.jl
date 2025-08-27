@@ -3,7 +3,7 @@ Spin operators module
 """
 module SpinOps
 
-using ..Utils: clean!
+using ..Utils: clean!, clean
 using LinearAlgebra: I, kron, diagm
 using StaticArrays: SMatrix
 
@@ -27,23 +27,33 @@ ST = SMatrix{4, 4}([
 
 function ST_basis(M::AbstractMatrix)
     @assert size(M) == (4, 4) "Matrix must be 4×4"
-    M = ST * M * transpose(ST)
-    clean!(M)
-    return M
+    result = ST * M * transpose(ST)
+    if result isa SMatrix
+        return clean(result)
+    else
+        clean!(result)
+        return result
+    end
 end
 
-Sx1 = ST_basis(kron(Sx, I(2)))
-Sx2 = ST_basis(kron(I(2), Sx))
-Sy1 = ST_basis(kron(Sy, I(2)))
-Sy2 = ST_basis(kron(I(2), Sy))
-Sz1 = ST_basis(kron(Sz, I(2)))
-Sz2 = ST_basis(kron(I(2), Sz))
+Sx1 = SMatrix{4, 4}(ST_basis(kron(Sx, I(2))))
+Sx2 = SMatrix{4, 4}(ST_basis(kron(I(2), Sx)))
+Sy1 = SMatrix{4, 4}(ST_basis(kron(Sy, I(2))))
+Sy2 = SMatrix{4, 4}(ST_basis(kron(I(2), Sy)))
+Sz1 = SMatrix{4, 4}(ST_basis(kron(Sz, I(2))))
+Sz2 = SMatrix{4, 4}(ST_basis(kron(I(2), Sz)))
 
-Ps = diagm(0 => [0.0, 0.0, 1.0, 0.0]) # projection operator for singlet state
-Pt = diagm(0 => [1/3, 1/3, 0.0, 1/3]) # projection operator for triplet state
-Pt0 = diagm(0 => [0.0, 1.0, 0.0, 0.0]) # projection operator for T0 state
-Ptp = diagm(0 => [1.0, 0.0, 0.0, 0.0]) # projection operator for T+ state
-Ptm = diagm(0 => [0.0, 0.0, 0.0, 1.0]) # projection operator for T- state
+Ps = SMatrix{4, 4}(diagm(0 => [0.0, 0.0, 1.0, 0.0])) # projection operator for singlet state
+Pt = SMatrix{4, 4}(diagm(0 => [1/3, 1/3, 0.0, 1/3])) # projection operator for triplet state
+Pt0 = SMatrix{4, 4}(diagm(0 => [0.0, 1.0, 0.0, 0.0])) # projection operator for T0 state
+Ptp = SMatrix{4, 4}(diagm(0 => [1.0, 0.0, 0.0, 0.0])) # projection operator for T+ state
+Ptm = SMatrix{4, 4}(diagm(0 => [0.0, 0.0, 0.0, 1.0])) # projection operator for T- state
+
+# same as ST_basis(kron(Sx, Sx) + kron(Sy, Sy) + kron(Sz, Sz))
+# Since Ps = 1/4 - S1S2, we have
+S1S2 = SMatrix{4, 4}(diagm(0=>[1/4, 1/4, -3/4, 1/4]))
+
+@assert S1S2 ≈ ST_basis(kron(Sx, Sx) .+ kron(Sy, Sy) .+ kron(Sz, Sz))  # Assertion commented out due to numerical precision issues
 
 export σx,
     σy,
@@ -61,6 +71,7 @@ export σx,
     Sy2,
     Sz1,
     Sz2,
+    S1S2,
     Ps,
     Pt,
     Pt0,

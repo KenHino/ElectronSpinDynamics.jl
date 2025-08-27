@@ -99,11 +99,25 @@ import ElectronSpinDynamics.SpinOps
         simparams = read_simparams(cfg)
 
         H = system_hamiltonian(sys, 1.0, 0.0, 0.0)
+        Hsw = SchultenWolynes_hamiltonian(mol1, mol2, 10)
+        H = H + Hsw[1]
+
         # H should be Hermitian + skew-Hermitian (Haberkorn term)
         # Therefore, H=H' except for diagonal elements
         @test H - diagm(0 => diag(H)) ≈ H' - diagm(0 => diag(H')) atol=1e-15
 
         L = liouvillian(H)
         @test L isa Matrix{ComplexF64}
+    end
+
+    @testset "Simulation" begin
+        cfg = read(Inifile(), "input.ini")   # Dict{String,Dict}
+        mol1 = read_molecule(cfg, "electron 1")
+        mol2 = read_molecule(cfg, "electron 2")
+        sys = read_system(cfg)
+        simparams = read_simparams(cfg)
+
+        tp, t0, s, tm = SW(sys, mol1, mol2, simparams)
+        @test length(tp) == length(t0) == length(s) == length(tm)
     end
 end

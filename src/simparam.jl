@@ -63,6 +63,6 @@ function read_simparams(cfg::IniFile.Inifile)
     )
 end
 
-export SimParams, read_simparams
+export SimParams, read_simparams, StateType, Singlet, Triplet
 
 end # module

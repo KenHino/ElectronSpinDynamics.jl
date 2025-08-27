@@ -28,6 +28,7 @@ export σx,
     Sy2,
     Sz1,
     Sz2,
+    S1S2,
     Ps,
     Pt,
     Pt0,
@@ -37,7 +38,7 @@ export σx,
 include("molecule.jl")
 using .MoleculeModule
 
-export Molecule, read_molecule
+export Molecule, read_molecule, Aiso, is_isotropic
 
 include("system.jl")
 using .SystemModule
@@ -45,16 +46,24 @@ export System, read_system
 
 include("simparam.jl")
 using .SimParamModule
-export SimParams, read_simparams
+export SimParams, read_simparams, StateType, Singlet, Triplet
 
 include("hamiltonian.jl")
 using .Hamiltonian
 
 export system_hamiltonian,
-    zeeman_hamiltonian, exchange_hamiltonian, dipolar_hamiltonian, haberkorn_hamiltonian
+    zeeman_hamiltonian,
+    exchange_hamiltonian,
+    dipolar_hamiltonian,
+    haberkorn_hamiltonian,
+    SchultenWolynes_hamiltonian
 
 include("liouvillian.jl")
 using .Liouvillian
 export liouvillian, vectorise, linearise, normalise, trace
+
+include("simulation.jl")
+using .Simulation
+export SW
 
 end
