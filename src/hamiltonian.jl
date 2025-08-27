@@ -8,7 +8,7 @@ using ..SystemModule: System
 using ..MoleculeModule: Molecule, is_isotropic, Aiso
 using ..Constants: γe
 using StaticArrays: SMatrix
-using Distributions: MultivariateNormal
+using Distributions: MultivariateNormal, Uniform
 
 function system_hamiltonian(sys::System, B::Float64, θ::Float64 = 0.0, ϕ::Float64 = 0.0)
     return system_hamiltonian(
@@ -113,12 +113,13 @@ end
 function SchultenWolynes_hamiltonian(mol1::Molecule, mol2::Molecule, N::Integer)
     @assert is_isotropic(mol1.A) "mol1 must be isotropic"
     @assert is_isotropic(mol2.A) "mol2 must be isotropic"
-    return SchultenWolynes_hamiltonian(Aiso(mol1.A), Aiso(mol2.A), mol1.I, mol2.I, N)
+    # return SchultenWolynes_hamiltonian(Aiso(mol1.A), Aiso(mol2.A), mol1.I, mol2.I, N)
+    return SchultenWolynes_hamiltonian(mol1.A, mol2.A, mol1.I, mol2.I, N)
 end
 
 function SchultenWolynes_hamiltonian(
-    a1::Vector{Float64},
-    a2::Vector{Float64},
+    a1::Union{Vector{Float64}, Array{Float64, 3}},
+    a2::Union{Vector{Float64}, Array{Float64, 3}},
     I1::Vector{<:Integer},
     I2::Vector{<:Integer},
     N::Integer,
@@ -156,6 +157,56 @@ function SW_each(
     Iy = Ixyz_sampled[2, :]
     Iz = Ixyz_sampled[3, :]
     return Ix, Iy, Iz
+end
+
+function SW_each(
+    A::Array{Float64, 3},
+    I::Vector{<:Integer},
+    N::Integer,
+)::Tuple{Vector{Float64}, Vector{Float64}, Vector{Float64}}
+    N_nuc = size(A, 1)
+    @assert size(A) == (N_nuc, 3, 3) "A must be a N_nuc×3×3 matrix but got $(size(A))"
+    @show N_nuc
+    θ, ϕ = sample_from_sphere(N, N_nuc)
+    # Unit vector on the sphere: x = sinθ cosϕ, y = sinθ sinϕ, z = cosθ
+    ux = sin.(θ) .* cos.(ϕ)  # (N, N_nuc)
+    uy = sin.(θ) .* sin.(ϕ)  # (N, N_nuc)
+    uz = cos.(θ)              # (N, N_nuc)
+
+    vector_length = sqrt.(I .* (I .+ 1))  # (N_nuc,)
+
+    Ix = zeros(Float64, N)
+    Iy = zeros(Float64, N)
+    Iz = zeros(Float64, N)
+    for i in 1:N_nuc
+        # Project A_i (3x3) on the random direction u for all N samples
+        bx = A[i, 1, 1] .* ux[:, i] .+ A[i, 1, 2] .* uy[:, i] .+ A[i, 1, 3] .* uz[:, i]
+        by = A[i, 2, 1] .* ux[:, i] .+ A[i, 2, 2] .* uy[:, i] .+ A[i, 2, 3] .* uz[:, i]
+        bz = A[i, 3, 1] .* ux[:, i] .+ A[i, 3, 2] .* uy[:, i] .+ A[i, 3, 3] .* uz[:, i]
+        w = vector_length[i]
+        Ix .+= w .* bx
+        Iy .+= w .* by
+        Iz .+= w .* bz
+    end
+
+    @assert size(Ix) == (N,) "Ix must be a N-element vector but got $(size(Ix))"
+    @assert size(Iy) == (N,) "Iy must be a N-element vector but got $(size(Iy))"
+    @assert size(Iz) == (N,) "Iz must be a N-element vector but got $(size(Iz))"
+    return Ix, Iy, Iz
+end
+
+function sample_from_sphere(N::Integer, N_nuc)::Tuple{Array{Float64, 2}, Array{Float64, 2}}
+    """
+    Since the volume element of a sphere is dΩ = sin(θ) dθ dϕ,
+    uniformly sampled points on a sphere are given by
+    θ = acos(2x - 1), ϕ = 2πy, where x and y are uniformly sampled from [0, 1].
+    """
+    @assert N ≥ 1 "N must be at least 1"
+    ϕ = rand(Uniform(0, 2π), (N, N_nuc))
+    θ = acos.(rand(Uniform(-1, 1), (N, N_nuc)))
+    @assert all(0 .≤ θ .≤ π) "θ must be in [0, π]"
+    @assert all(0 .≤ ϕ .≤ 2π) "ϕ must be in [0, 2π]"
+    return θ, ϕ
 end
 
 export system_hamiltonian,

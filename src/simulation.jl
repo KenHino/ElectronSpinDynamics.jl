@@ -6,8 +6,7 @@ using ..MoleculeModule: Molecule, Aiso, read_molecule
 using ..Hamiltonian: system_hamiltonian, SchultenWolynes_hamiltonian
 using ..Liouvillian: liouvillian, vectorise
 using ..SpinOps: Ps
-using ..Utils: Inifile
-
+using IniFile
 using Base.Threads
 using LinearAlgebra
 using StaticArrays
