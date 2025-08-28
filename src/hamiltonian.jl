@@ -1,16 +1,22 @@
 
 module Hamiltonian
 
-using ..Utils: clean
-using LinearAlgebra: I, ishermitian, diagm
+using ..Utils: clean, sample_from_sphere, sphere_to_cartesian
 using ..SpinOps: Sx1, Sy1, Sz1, Sx2, Sy2, Sz2, Ps, Pt, S1S2
 using ..SystemModule: System
 using ..MoleculeModule: Molecule, is_isotropic, Aiso
 using ..Constants: γe
-using StaticArrays: SMatrix
-using Distributions: MultivariateNormal, Uniform
 
-function system_hamiltonian(sys::System, B::Float64, θ::Float64 = 0.0, ϕ::Float64 = 0.0)
+using LinearAlgebra: I, ishermitian, diagm
+using StaticArrays: SMatrix
+using Distributions: MultivariateNormal
+
+function system_hamiltonian(
+    sys::System,
+    B::Float64,
+    θ::Float64 = 0.0,
+    ϕ::Float64 = 0.0,
+)::SMatrix{4, 4, ComplexF64}
     return system_hamiltonian(
         B = B,
         θ = θ,
@@ -30,7 +36,7 @@ function system_hamiltonian(;
     D::Union{Float64, AbstractMatrix{Float64}} = 0.0,
     kS::Float64 = 0.0,
     kT::Float64 = 0.0,
-)
+)::SMatrix{4, 4, ComplexF64}
     Hz = zeeman_hamiltonian(B, θ, ϕ)
     Hj = exchange_hamiltonian(J)
     Hd = dipolar_hamiltonian(D)
@@ -41,7 +47,11 @@ function system_hamiltonian(;
     return Hsys
 end
 
-function zeeman_hamiltonian(B::Float64, θ::Float64 = 0.0, ϕ::Float64 = 0.0)
+function zeeman_hamiltonian(
+    B::Float64,
+    θ::Float64 = 0.0,
+    ϕ::Float64 = 0.0,
+)::SMatrix{4, 4, ComplexF64}
     """
     Hz = -γe ∑_i (Bx Sx_i + By Sy_i + Bz Sz_i)
 
@@ -61,26 +71,26 @@ function zeeman_hamiltonian(B::Float64, θ::Float64 = 0.0, ϕ::Float64 = 0.0)
     return Hz
 end
 
-function exchange_hamiltonian(sys::System)
+function exchange_hamiltonian(sys::System)::SMatrix{4, 4, ComplexF64}
     return exchange_hamiltonian(sys.J)
 end
 
-function exchange_hamiltonian(J::Float64)
+function exchange_hamiltonian(J::Float64)::SMatrix{4, 4, ComplexF64}
     Hj = SMatrix{4, 4, ComplexF64}(J .* (2.0 .* S1S2 .- 0.5 .* I(4)))
     return -Hj
 end
 
-function dipolar_hamiltonian(sys::System)
+function dipolar_hamiltonian(sys::System)::SMatrix{4, 4, ComplexF64}
     return dipolar_hamiltonian(sys.D)
 end
 
-function dipolar_hamiltonian(D::Float64)
+function dipolar_hamiltonian(D::Float64)::SMatrix{4, 4, ComplexF64}
     @assert D ≤ 0 "D must be non-positive under point-dipole approximation"
     Dtensor = diagm(0 => [2D/3, 2D/3, -4D/3])
     return dipolar_hamiltonian(Dtensor)
 end
 
-function dipolar_hamiltonian(D::AbstractMatrix)
+function dipolar_hamiltonian(D::AbstractMatrix)::SMatrix{4, 4, ComplexF64}
     @assert size(D) == (3, 3) "D must be a 3×3 matrix"
     @assert all(isreal(D)) "D must be real"
     @assert D == D' "D must be symmetric"
@@ -99,18 +109,22 @@ function dipolar_hamiltonian(D::AbstractMatrix)
     return -Hd
 end
 
-function haberkorn_hamiltonian(sys::System)
+function haberkorn_hamiltonian(sys::System)::SMatrix{4, 4, ComplexF64}
     return haberkorn_hamiltonian(sys.kS, sys.kT)
 end
 
-function haberkorn_hamiltonian(kS::Float64, kT::Float64)
+function haberkorn_hamiltonian(kS::Float64, kT::Float64)::SMatrix{4, 4, ComplexF64}
     Hk = SMatrix{4, 4, ComplexF64}(
         (-1.0im * kS / 2.0 .* Ps .- 1.0im * kT / 2.0 .* Pt) ./ abs(γe) .* 1e-03,
     )
     return Hk
 end
 
-function SchultenWolynes_hamiltonian(mol1::Molecule, mol2::Molecule, N::Integer)
+function SchultenWolynes_hamiltonian(
+    mol1::Molecule,
+    mol2::Molecule,
+    N::Integer,
+)::Vector{SMatrix{4, 4, ComplexF64}}
     @assert is_isotropic(mol1.A) "mol1 must be isotropic"
     @assert is_isotropic(mol2.A) "mol2 must be isotropic"
     # return SchultenWolynes_hamiltonian(Aiso(mol1.A), Aiso(mol2.A), mol1.I, mol2.I, N)
@@ -166,12 +180,12 @@ function SW_each(
 )::Tuple{Vector{Float64}, Vector{Float64}, Vector{Float64}}
     N_nuc = size(A, 1)
     @assert size(A) == (N_nuc, 3, 3) "A must be a N_nuc×3×3 matrix but got $(size(A))"
-    @show N_nuc
-    θ, ϕ = sample_from_sphere(N, N_nuc)
+    θ, ϕ = sample_from_sphere((N, N_nuc))
     # Unit vector on the sphere: x = sinθ cosϕ, y = sinθ sinϕ, z = cosθ
-    ux = sin.(θ) .* cos.(ϕ)  # (N, N_nuc)
-    uy = sin.(θ) .* sin.(ϕ)  # (N, N_nuc)
-    uz = cos.(θ)              # (N, N_nuc)
+    ux, uy, uz = sphere_to_cartesian(θ, ϕ)  # (N, N_nuc)
+    @assert size(ux) == (N, N_nuc) "ux must be a N×N_nuc matrix but got $(size(ux))"
+    @assert size(uy) == (N, N_nuc) "uy must be a N×N_nuc matrix but got $(size(uy))"
+    @assert size(uz) == (N, N_nuc) "uz must be a N×N_nuc matrix but got $(size(uz))"
 
     vector_length = sqrt.(I .* (I .+ 1))  # (N_nuc,)
 
@@ -193,20 +207,6 @@ function SW_each(
     @assert size(Iy) == (N,) "Iy must be a N-element vector but got $(size(Iy))"
     @assert size(Iz) == (N,) "Iz must be a N-element vector but got $(size(Iz))"
     return Ix, Iy, Iz
-end
-
-function sample_from_sphere(N::Integer, N_nuc)::Tuple{Array{Float64, 2}, Array{Float64, 2}}
-    """
-    Since the volume element of a sphere is dΩ = sin(θ) dθ dϕ,
-    uniformly sampled points on a sphere are given by
-    θ = acos(2x - 1), ϕ = 2πy, where x and y are uniformly sampled from [0, 1].
-    """
-    @assert N ≥ 1 "N must be at least 1"
-    ϕ = rand(Uniform(0, 2π), (N, N_nuc))
-    θ = acos.(rand(Uniform(-1, 1), (N, N_nuc)))
-    @assert all(0 .≤ θ .≤ π) "θ must be in [0, π]"
-    @assert all(0 .≤ ϕ .≤ 2π) "ϕ must be in [0, 2π]"
-    return θ, ϕ
 end
 
 export system_hamiltonian,

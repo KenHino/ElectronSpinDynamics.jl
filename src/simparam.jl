@@ -3,7 +3,7 @@ using ..Utils
 using IniFile
 
 @enum SimulationType SW SC
-function to_simulation_type(str::AbstractString)
+function to_simulation_type(str::AbstractString)::SimulationType
     s = lowercase(str)
     if s in ("sw", "schulten-wolynes")
         return SW
@@ -15,7 +15,7 @@ function to_simulation_type(str::AbstractString)
 end
 
 @enum StateType Singlet Triplet
-function to_state_type(str::AbstractString)
+function to_state_type(str::AbstractString)::StateType
     s = lowercase(str)
     if s in ("singlet", "s")
         return Singlet
@@ -37,7 +37,7 @@ struct SimParams
     dt              :: Float64
 end
 
-function read_simparams(cfg::IniFile.Inifile)
+function read_simparams(cfg::IniFile.Inifile)::SimParams
     sec = "simulation parameters"
 
     simulation_type = to_simulation_type(get(cfg, sec, "simulation_type", "SW"))

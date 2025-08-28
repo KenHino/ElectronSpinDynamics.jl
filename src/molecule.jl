@@ -50,7 +50,7 @@ end
 # ---------------------------------------------------------------------
 # main API
 # ---------------------------------------------------------------------
-function read_molecule(cfg::IniFile.Inifile, section::AbstractString)
+function read_molecule(cfg::IniFile.Inifile, section::AbstractString)::Molecule
     # ---- scalars & short vectors ------------------------------------
     g  = parse(Float64, get(cfg, section, "g", "NaN"))
     NI = vecparse(UInt, get(cfg, section, "N_I", ""))

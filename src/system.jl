@@ -10,7 +10,7 @@ struct System
     kT :: Float64            # triplet  rate constant in μs-1
 end
 
-function read_system(cfg::IniFile.Inifile)
+function read_system(cfg::IniFile.Inifile)::System
     sec = "system variables"
 
     J  = parse(Float64, get(cfg, sec, "J", "NaN"))

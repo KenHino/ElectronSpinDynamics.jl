@@ -25,7 +25,7 @@ ST = SMatrix{4, 4}([
      0  0    0    1
 ])
 
-function ST_basis(M::AbstractMatrix)
+function ST_basis(M::AbstractMatrix)::AbstractMatrix
     @assert size(M) == (4, 4) "Matrix must be 4×4"
     result = ST * M * transpose(ST)
     if result isa SMatrix

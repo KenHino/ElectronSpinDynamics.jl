@@ -3,7 +3,7 @@ module Liouvillian
 using ..Utils: clean!
 using LinearAlgebra: I, kron, tr
 
-function liouvillian(H::AbstractMatrix)
+function liouvillian(H::AbstractMatrix)::AbstractMatrix
     """
     dρ/dt = 1/iħ L ρ
     where L = 1/iħ H

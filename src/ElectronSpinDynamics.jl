@@ -9,6 +9,8 @@ export ℏ, μ0, γe, γ1H, γ14N, g_electron
 include("utils.jl")
 using .Utils
 
+export sample_from_sphere, sphere_to_cartesian
+
 include("spinops.jl")
 using .SpinOps
 
