@@ -19,21 +19,21 @@ Sp = SMatrix{2,2}([0.0 1.0; 0.0 0.0])
 Sm = SMatrix{2,2}([0.0 0.0; 1.0 0.0])
 
 ST = SMatrix{4,4}([
-  1 0 0 0;
-  0 1/√2 1/√2 0;
-  0 -1/√2 1/√2 0;
-  0 0 0 1
+    1 0 0 0;
+    0 1/√2 1/√2 0;
+    0 -1/√2 1/√2 0;
+    0 0 0 1
 ])
 
 function ST_basis(M::AbstractMatrix)::AbstractMatrix
-  @assert size(M) == (4, 4) "Matrix must be 4×4"
-  result = ST * M * transpose(ST)
-  if result isa SMatrix
-    return clean(result)
-  else
-    clean!(result)
-    return result
-  end
+    @assert size(M) == (4, 4) "Matrix must be 4×4"
+    result = ST * M * transpose(ST)
+    if result isa SMatrix
+        return clean(result)
+    else
+        clean!(result)
+        return result
+    end
 end
 
 Sx1 = SMatrix{4,4}(ST_basis(kron(Sx, I(2))))
@@ -56,26 +56,26 @@ S1S2 = SMatrix{4,4}(diagm(0=>[1/4, 1/4, -3/4, 1/4]))
 @assert S1S2 ≈ ST_basis(kron(Sx, Sx) .+ kron(Sy, Sy) .+ kron(Sz, Sz))  # Assertion commented out due to numerical precision issues
 
 export σx,
-  σy,
-  σz,
-  Sx,
-  Sy,
-  Sz,
-  Sp,
-  Sm,
-  ST,
-  ST_basis,
-  Sx1,
-  Sx2,
-  Sy1,
-  Sy2,
-  Sz1,
-  Sz2,
-  S1S2,
-  Ps,
-  Pt,
-  Pt0,
-  Ptp,
-  Ptm
+    σy,
+    σz,
+    Sx,
+    Sy,
+    Sz,
+    Sp,
+    Sm,
+    ST,
+    ST_basis,
+    Sx1,
+    Sx2,
+    Sy1,
+    Sy2,
+    Sz1,
+    Sz2,
+    S1S2,
+    Ps,
+    Pt,
+    Pt0,
+    Ptp,
+    Ptm
 
 end # module
