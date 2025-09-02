@@ -40,7 +40,7 @@ mat3(s::AbstractString)::Matrix{Float64} = reshape(vecparse(Float64, s), 3, 3)
 Same as [`mat3`](@ref) but returns a stack‑allocated `SMatrix` from
 StaticArrays.jl for maximum performance in tight inner loops.
 """
-mat3static(s::AbstractString)::SMatrix{3, 3, Float64} = SMatrix{3, 3}(mat3(s))
+mat3static(s::AbstractString)::SMatrix{3,3,Float64} = SMatrix{3,3}(mat3(s))
 
 """
     clean!(M::AbstractMatrix)
@@ -48,52 +48,51 @@ mat3static(s::AbstractString)::SMatrix{3, 3, Float64} = SMatrix{3, 3}(mat3(s))
 Set all elements of `M` to zero if they are less than 1e-15.
 """
 function clean!(M::AbstractMatrix)
-    for i in axes(M, 1), j in axes(M, 2)
-        if abs(M[i, j]) < 1e-15
-            M[i, j] = 0.0
-        elseif abs(M[i, j] - 0.5) < 1e-15
-            M[i, j] = 0.5
-        elseif abs(M[i, j] + 0.5) < 1e-15
-            M[i, j] = -0.5
-        elseif abs(M[i, j] - √2/4) < 1e-15
-            M[i, j] = √2/4
-        elseif abs(M[i, j] + √2/4) < 1e-15
-            M[i, j] = -√2/4
-        elseif abs(M[i, j] - √2/4im) < 1e-15
-            M[i, j] = √2/4im
-        elseif abs(M[i, j] + √2/4im) < 1e-15
-            M[i, j] = -√2/4im
-        end
+  for i in axes(M, 1), j in axes(M, 2)
+    if abs(M[i, j]) < 1e-15
+      M[i, j] = 0.0
+    elseif abs(M[i, j] - 0.5) < 1e-15
+      M[i, j] = 0.5
+    elseif abs(M[i, j] + 0.5) < 1e-15
+      M[i, j] = -0.5
+    elseif abs(M[i, j] - √2/4) < 1e-15
+      M[i, j] = √2/4
+    elseif abs(M[i, j] + √2/4) < 1e-15
+      M[i, j] = -√2/4
+    elseif abs(M[i, j] - √2/4im) < 1e-15
+      M[i, j] = √2/4im
+    elseif abs(M[i, j] + √2/4im) < 1e-15
+      M[i, j] = -√2/4im
     end
+  end
 end
 
-function clean(M::SMatrix{N, N, T})::SMatrix{N, N, T} where {N, T}
-    M_mut = Matrix(M)
-    clean!(M_mut)
-    return SMatrix{N, N, T}(M_mut)
+function clean(M::SMatrix{N,N,T})::SMatrix{N,N,T} where {N,T}
+  M_mut = Matrix(M)
+  clean!(M_mut)
+  return SMatrix{N,N,T}(M_mut)
 end
 
-function sample_from_sphere(shape)::Tuple{Array{Float64, 2}, Array{Float64, 2}}
-    """
-    Since the volume element of a sphere is dΩ = sin(θ) dθ dϕ,
-    uniformly sampled points on a sphere are given by
-    θ = acos(2x - 1), ϕ = 2πy, where x and y are uniformly sampled from [0, 1].
-    """
-    ϕ = rand(Uniform(0, 2π), shape)
-    θ = acos.(rand(Uniform(-1, 1), shape))
-    @assert all(0 .≤ θ .≤ π) "θ must be in [0, π]"
-    @assert all(0 .≤ ϕ .≤ 2π) "ϕ must be in [0, 2π]"
-    return θ, ϕ
+function sample_from_sphere(shape)::Tuple{Array{Float64,2},Array{Float64,2}}
+  """
+  Since the volume element of a sphere is dΩ = sin(θ) dθ dϕ,
+  uniformly sampled points on a sphere are given by
+  θ = acos(2x - 1), ϕ = 2πy, where x and y are uniformly sampled from [0, 1].
+  """
+  ϕ = rand(Uniform(0, 2π), shape)
+  θ = acos.(rand(Uniform(-1, 1), shape))
+  @assert all(0 .≤ θ .≤ π) "θ must be in [0, π]"
+  @assert all(0 .≤ ϕ .≤ 2π) "ϕ must be in [0, 2π]"
+  return θ, ϕ
 end
 
 function sphere_to_cartesian(
-    θ::Array{Float64, T},
-    ϕ::Array{Float64, T},
-)::Tuple{Array{Float64, T}, Array{Float64, T}, Array{Float64, T}} where {T}
-    x = sin.(θ) .* cos.(ϕ)
-    y = sin.(θ) .* sin.(ϕ)
-    z = cos.(θ)
-    return x, y, z
+  θ::Array{Float64,T}, ϕ::Array{Float64,T}
+)::Tuple{Array{Float64,T},Array{Float64,T},Array{Float64,T}} where {T}
+  x = sin.(θ) .* cos.(ϕ)
+  y = sin.(θ) .* sin.(ϕ)
+  z = cos.(θ)
+  return x, y, z
 end
 
 end # module
