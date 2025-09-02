@@ -58,6 +58,15 @@ function zeeman_hamiltonian(
     return Hz
 end
 
+function zeeman_hamiltonian(
+    ω1::AbstractVector{Float64}, ω2::AbstractVector{Float64}
+)::SMatrix{4,4,ComplexF64}
+    Hz = SMatrix{4,4,ComplexF64}(
+        ω1[1] * Sx1 + ω1[2] * Sy1 + ω1[3] * Sz1 + ω2[1] * Sx2 + ω2[2] * Sy2 + ω2[3] * Sz2
+    )
+    return Hz
+end
+
 function exchange_hamiltonian(sys::System)::SMatrix{4,4,ComplexF64}
     return exchange_hamiltonian(sys.J)
 end

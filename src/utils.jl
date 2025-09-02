@@ -8,6 +8,7 @@ module Utils
 
 using StaticArrays
 using Distributions: Uniform
+using Random
 
 export vecparse, mat3, mat3static, clean!, clean, sample_from_sphere, sphere_to_cartesian
 
@@ -73,12 +74,15 @@ function clean(M::SMatrix{N,N,T})::SMatrix{N,N,T} where {N,T}
     return SMatrix{N,N,T}(M_mut)
 end
 
-function sample_from_sphere(shape)::Tuple{Array{Float64,2},Array{Float64,2}}
+function sample_from_sphere(shape; seed=nothing)::Tuple{Array{Float64,2},Array{Float64,2}}
     """
     Since the volume element of a sphere is dΩ = sin(θ) dθ dϕ,
     uniformly sampled points on a sphere are given by
     θ = acos(2x - 1), ϕ = 2πy, where x and y are uniformly sampled from [0, 1].
     """
+    if seed !== nothing
+        Random.seed!(seed)
+    end
     ϕ = rand(Uniform(0, 2π), shape)
     θ = acos.(rand(Uniform(-1, 1), shape))
     @assert all(0 .≤ θ .≤ π) "θ must be in [0, π]"
