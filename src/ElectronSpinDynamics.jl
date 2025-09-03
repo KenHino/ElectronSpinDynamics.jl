@@ -66,6 +66,6 @@ export liouvillian, vectorise, linearise, normalise, trace
 
 include("simulation.jl")
 using .Simulation
-export SW
+export SW, SC
 
 end

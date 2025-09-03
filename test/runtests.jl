@@ -3,6 +3,8 @@ using Test
 using LinearAlgebra
 using StaticArrays
 using IniFile
+import ElectronSpinDynamics.Simulation: SC
+import ElectronSpinDynamics.SimParamModule: Singlet
 
 # Import modules for testing
 import ElectronSpinDynamics.Constants
@@ -119,5 +121,112 @@ import ElectronSpinDynamics.SpinOps
 
         tp, t0, s, tm = SW(sys, mol1, mol2, simparams)
         @test length(tp) == length(t0) == length(s) == length(tm)
+    end
+
+    @testset "SC" begin
+        # helper to build zero A tensors with n nuclei
+        zero_A(n) = zeros(Float64, n, 3, 3)
+        # expected length for a given time grid
+        expected_len(simulation_time, dt) = Int(round(simulation_time / dt)) + 1
+
+        # Common small, fast settings
+        N = 6
+        ttotal = 0.1
+        dtns = 0.01
+        Bvec = [0.0]
+        I1 = [2]   # m=2 -> H
+        I2 = [3]   # m=3 -> N
+
+        @testset "(1) kS=kT, C==0, A==0" begin
+            res = SC(;
+                N_samples=N,
+                simulation_time=ttotal,
+                dt=dtns,
+                initial_state=Singlet,
+                B=Bvec,
+                J=0.0,
+                D=0.0,
+                kS=1.0,
+                kT=1.0,
+                a1=zero_A(1),
+                a2=zero_A(1),
+                I1=I1,
+                I2=I2,
+            )
+            @test haskey(res, Bvec[1])
+            S = res[Bvec[1]]["S"]
+            @test length(S) == expected_len(ttotal, dtns)
+            @test all(isfinite, S)
+        end
+
+        @testset "(2) kS=kT, C!=0, A==0" begin
+            res = SC(;
+                N_samples=N,
+                simulation_time=ttotal,
+                dt=dtns,
+                initial_state=Singlet,
+                B=[1.0],
+                J=0.2,
+                D=0.0,
+                kS=1.0,
+                kT=1.0,
+                a1=zero_A(1),
+                a2=zero_A(1),
+                I1=I1,
+                I2=I2,
+            )
+            @test haskey(res, 1.0)
+            S = res[1.0]["S"]
+            @test length(S) == expected_len(ttotal, dtns)
+            @test all(isfinite, S)
+        end
+
+        @testset "(3) kS!=kT, C!=0, A==0" begin
+            res = SC(;
+                N_samples=N,
+                simulation_time=ttotal,
+                dt=dtns,
+                initial_state=Singlet,
+                B=[1.0],
+                J=0.2,
+                D=-0.1,
+                kS=1.0,
+                kT=2.0,
+                a1=zero_A(1),
+                a2=zero_A(1),
+                I1=I1,
+                I2=I2,
+            )
+            @test haskey(res, 1.0)
+            S = res[1.0]["S"]
+            @test length(S) == expected_len(ttotal, dtns)
+            @test all(isfinite, S)
+        end
+
+        @testset "(4) arbitrary" begin
+            Aarb1 = zero_A(1);
+            Aarb1[1, :, :] .= diagm(0 => [1.0, 0.5, 0.2])
+            Aarb2 = zero_A(1);
+            Aarb2[1, :, :] .= diagm(0 => [0.1, 0.2, 0.3])
+            res = SC(;
+                N_samples=N,
+                simulation_time=ttotal,
+                dt=dtns,
+                initial_state=Singlet,
+                B=[2.0],
+                J=0.3,
+                D=-0.2,
+                kS=0.8,
+                kT=1.1,
+                a1=Aarb1,
+                a2=Aarb2,
+                I1=I1,
+                I2=I2,
+            )
+            @test haskey(res, 2.0)
+            S = res[2.0]["S"]
+            @test length(S) == expected_len(ttotal, dtns)
+            @test all(isfinite, S)
+        end
     end
 end

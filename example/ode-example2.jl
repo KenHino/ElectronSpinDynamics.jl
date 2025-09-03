@@ -11,13 +11,14 @@ const σy = ComplexF64[0 -im; im 0]
 const σz = ComplexF64[1 0; 0 -1]
 const I2 = Matrix{ComplexF64}(I, 2, 2)
 
-σ(i) = if i==1
-    σx
-elseif i==2
-    σy
-else
-    σz
-end
+σ(i) =
+    if i==1
+        σx
+    elseif i==2
+        σy
+    else
+        σz
+    end
 σ1(i) = kron(σ(i), I2)
 σ2(j) = kron(I2, σ(j))
 σ1σ2(i, j) = kron(σ(i), σ(j))
