@@ -14,9 +14,10 @@ repos:
 
   # Julia formatter
   - repo: https://github.com/domluna/JuliaFormatter.jl
-    rev: v1.0.62
+    rev: v2.1.6
     hooks:
       - id: julia-formatter
+        entry: "julia --project=. -e 'import JuliaFormatter: format; format(ARGS)'"
 
   # Julia tests
   - repo: local
