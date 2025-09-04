@@ -23,7 +23,7 @@ repos:
     hooks:
       - id: julia-test
         name: Run Julia tests
-        entry: julia --project=. -e "using Pkg; Pkg.test(); Pkg.test(\"ElectronSpinDynamics\")"
+        entry: julia --project=. --threads 2 -e "using Pkg; Pkg.test(); Pkg.test(\"ElectronSpinDynamics\")"
         language: system
         files: \.(jl)$
         pass_filenames: false

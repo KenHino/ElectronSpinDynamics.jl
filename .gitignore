@@ -2,8 +2,10 @@
 *.jl.cov
 *.jl.mem
 *.h5 # HDF5 file results
+*.png
 
 /out/
+/test/out
 
 /docs/Manifest*.toml
 /docs/build/

@@ -91,6 +91,7 @@ function SW(;
     mult1::Vector{<:Integer},
     mult2::Vector{<:Integer},
     output_folder::String=nothing,
+    Nbatch::Int=10_000,
 )::Dict{Float64,Dict{String,Vector{Float64}}}
     N = N_samples
     time_ns = 0:dt:simulation_time
@@ -101,22 +102,85 @@ function SW(;
         ham = system_hamiltonian(; B=B0, J=J, D=D, kS=kS, kT=kT)
         Hsw = SchultenWolynes_hamiltonian(a1, a2, mult1, mult2, N)
 
-        tp = Array{Float64,2}(undef, nsteps, N)
-        t0 = Array{Float64,2}(undef, nsteps, N)
-        s = Array{Float64,2}(undef, nsteps, N)
-        tm = Array{Float64,2}(undef, nsteps, N)
+        if Nbatch >= N
+            tp = Array{Float64,2}(undef, nsteps, N)
+            t0 = Array{Float64,2}(undef, nsteps, N)
+            s = Array{Float64,2}(undef, nsteps, N)
+            tm = Array{Float64,2}(undef, nsteps, N)
 
-        @threads for i in 1:N
-            tp_i, t0_i, s_i, tm_i = each_process_SW(nsteps, ham, Hsw[i], dt, initial_state)
-            tp[:, i] = tp_i
-            t0[:, i] = t0_i
-            s[:, i] = s_i
-            tm[:, i] = tm_i
+            @threads for i in 1:N
+                tp_i, t0_i, s_i, tm_i = each_process_SW(
+                    nsteps, ham, Hsw[i], dt, initial_state
+                )
+                tp[:, i] = tp_i
+                t0[:, i] = t0_i
+                s[:, i] = s_i
+                tm[:, i] = tm_i
+            end
+            μ_tp, se_tp = mean_std_se(tp)
+            μ_t0, se_t0 = mean_std_se(t0)
+            μ_s, se_s = mean_std_se(s)
+            μ_tm, se_tm = mean_std_se(tm)
+            results[B0] = Dict(
+                "T+" => μ_tp,
+                "T0" => μ_t0,
+                "S" => μ_s,
+                "T-" => μ_tm,
+                "se_T+" => se_tp,
+                "se_T0" => se_t0,
+                "se_S" => se_s,
+                "se_T-" => se_tm,
+                "time_ns" => collect(time_ns),
+            )
+            continue
         end
-        μ_tp, se_tp = mean_std_se(tp)
-        μ_t0, se_t0 = mean_std_se(t0)
-        μ_s, se_s = mean_std_se(s)
-        μ_tm, se_tm = mean_std_se(tm)
+
+        remaining = N
+
+        rs_tp = RunningStats(nsteps)
+        rs_t0 = RunningStats(nsteps)
+        rs_s = RunningStats(nsteps)
+        rs_tm = RunningStats(nsteps)
+
+        while remaining > 0
+            b = min(Nbatch, remaining)
+            tp = Array{Float64,2}(undef, nsteps, b)
+            t0 = Array{Float64,2}(undef, nsteps, b)
+            s = Array{Float64,2}(undef, nsteps, b)
+            tm = Array{Float64,2}(undef, nsteps, b)
+
+            @threads for i in 1:b
+                tp_i, t0_i, s_i, tm_i = each_process_SW(
+                    nsteps, ham, Hsw[i], dt, initial_state
+                )
+                tp[:, i] = tp_i
+                t0[:, i] = t0_i
+                s[:, i] = s_i
+                tm[:, i] = tm_i
+            end
+            μ_tp_b, se_tp_b = mean_std_se(tp)
+            μ_t0_b, se_t0_b = mean_std_se(t0)
+            μ_s_b, se_s_b = mean_std_se(s)
+            μ_tm_b, se_tm_b = mean_std_se(tm)
+
+            update!(rs_tp, b, μ_tp_b, batch_M2_from_se(se_tp_b, b))
+            update!(rs_t0, b, μ_t0_b, batch_M2_from_se(se_t0_b, b))
+            update!(rs_s, b, μ_s_b, batch_M2_from_se(se_s_b, b))
+            update!(rs_tm, b, μ_tm_b, batch_M2_from_se(se_tm_b, b))
+
+            remaining -= b
+            z = 1.959963984540054 # quantile(Normal(), 0.975)
+            mean_se_s = mean(se(rs_s.M2, rs_s.count); dims=1)[1] * z
+            println(
+                "$(Dates.now()) Completed $(N - remaining) trajectories ($((N - remaining) / N * 100)%): ΔPs(95%) = $(mean_se_s)",
+            )
+        end
+
+        μ_tp, se_tp = finalize(rs_tp)
+        μ_t0, se_t0 = finalize(rs_t0)
+        μ_s, se_s = finalize(rs_s)
+        μ_tm, se_tm = finalize(rs_tm)
+
         results[B0] = Dict(
             "T+" => μ_tp,
             "T0" => μ_t0,
@@ -141,7 +205,8 @@ end
 function mean_std_se(M)
     N = size(M, 2)
     μ = vec(mean(M; dims=2))
-    s = vec(std(M; dims=2))          # corrected=true by default -> sample std
+    # corrected=true => divide by N-1 => sample std
+    s = vec(std(M; corrected=true, dims=2))
     se = s ./ sqrt(N) # standard error
     μ, se
 end
@@ -381,6 +446,8 @@ function SC2_naive!(du, u, p, t)
 end
 
 function SC2!(du, u, p::SCParams, t)
+    N1 = length(p.A1)
+    N2 = length(p.A2)
     offset1 = 6
     offset2 = 6 + 3*N1
     offset3 = 6 + 3*N1 + 3*N2
@@ -390,8 +457,6 @@ function SC2!(du, u, p::SCParams, t)
     I2 = @view u[(offset2 + 1):(offset2 + 3 * N2)]
     dI1 = @view du[(offset1 + 1):(offset1 + 3 * N1)]
     dI2 = @view du[(offset2 + 1):(offset2 + 3 * N2)]
-    N1 = length(p.A1)
-    N2 = length(p.A2)
     ω1′ = p.ω1 + sum(p.A1[k]*I1[(3k - 2):3k] for k in 1:N1)
     for k in 1:N1
         dI1[(3k - 2):3k] .= cross(p.ω1n[k] + p.A1[k]' * S1, I1[(3k - 2):3k])
@@ -494,19 +559,6 @@ function output_func1(sol, i)
         Ptm[k] -=
             (4.0*St1z*St2z - 2.0*St1z - 2.0*St2z) * (S01x*S02x + S01y*S02y + S01z*S02z)
     end
-    if (i % 10_000 == 0) || (i == N)
-        println(
-            string(
-                "[",
-                Dates.format(Dates.now(), "HH:MM:SS"),
-                "] Completed ",
-                i,
-                "/",
-                N,
-                " trajectories",
-            ),
-        )
-    end
     (
         (
             t,
@@ -542,17 +594,6 @@ function output_func2(sol, i)
         Pt0[k] = (1/4 + Txx + Tyy - Tzz) * (1/4 - tr0) * 4
         Ptp[k] = (1/4 + 1/2*St1z + 1/2*St2z + Tzz) * (1/4 - tr0) * 4
         Ptm[k] = (1/4 - 1/2*St1z - 1/2*St2z + Tzz) * (1/4 - tr0) * 4
-    end
-    if (i % 10_000 == 0 || i == 1)
-        println(
-            string(
-                "[",
-                Dates.format(Dates.now(), "HH:MM:SS"),
-                "] Completed ",
-                i,
-                " trajectories",
-            ),
-        )
     end
     (
         (
@@ -591,19 +632,6 @@ function output_func3(sol, i)
         Pt0[k] = (p/4 + Txx + Tyy - Tzz) * (p0/4 - tr0) * 4
         Ptp[k] = (p/4 + 1/2*St1z + 1/2*St2z + Tzz) * (p0/4 - tr0) * 4
         Ptm[k] = (p/4 - 1/2*St1z - 1/2*St2z + Tzz) * (p0/4 - tr0) * 4
-    end
-    if (i % 10_000 == 0) || (i == N)
-        println(
-            string(
-                "[",
-                Dates.format(Dates.now(), "HH:MM:SS"),
-                "] Completed ",
-                i,
-                "/",
-                N,
-                " trajectories",
-            ),
-        )
     end
     ((t, Ptp, Pt0, Ps, Ptm), false)
 end
@@ -667,6 +695,56 @@ function SC(
     )
 end
 
+mutable struct RunningStats
+    count::Integer         # N = length(x): Number of samples
+    mean::Vector{Float64}  # μ = ∑x_i / N: Mean of the samples
+    M2::Vector{Float64}    # M2 = ∑(x_i - μ)²: Sum of squared deviations from the mean
+end
+
+RunningStats(nsteps::Integer) = RunningStats(0, zeros(nsteps), zeros(nsteps))
+
+function update!(
+    rs::RunningStats, b::Integer, bmean::AbstractVector{<:Real}, bM2::AbstractVector{<:Real}
+)
+    """
+    Δ = μ_b - μ_N
+    μnew = (N * μ_N + b * μ_b) / (N + b)
+         = μ_N + Δ * (b / (N + b))
+         = μ_B - Δ * (N / (N + b))
+    M2new = ∑ (x_i - μnew)² + ∑ (x_j - μnew)²
+          = ∑ (x_i - μ_N - Δ * (b / (N + b)))²
+          + ∑ (x_j - μ_B + Δ * (N / (N + b)))²
+          = M2_N + M2_B + Δ² * (N * b / (N + b))
+    """
+
+    new_count = rs.count + b
+    Δ = bmean .- rs.mean
+    rs.mean .+= Δ .* (b / new_count)
+    rs.M2 .+= bM2 .+ (Δ .^ 2) .* (rs.count * b / new_count)
+    rs.count = new_count
+    return rs
+end
+
+function finalize(rs::RunningStats)
+    n = rs.count
+    if n <= 1
+        return (copy(rs.mean), fill(NaN, length(rs.mean)))  # SE undefined for n<=1
+    else
+        s = sqrt.(rs.M2 ./ (n - 1))  # sample std
+        se = s ./ sqrt(n)
+        return (copy(rs.mean), se)
+    end
+end
+
+function batch_M2_from_se(se::AbstractVector{<:Real}, b::Integer)
+    b > 1 ? (se .^ 2) .* (b * (b - 1)) : zeros(length(se))
+end  # since se = s/√b, M2 = s²*(b-1)
+
+function se(M2::AbstractVector{<:Real}, n::Integer)
+    std = sqrt.(M2 ./ (n - 1))
+    return std ./ sqrt(n)
+end
+
 function SC(;
     N_samples::Integer,
     simulation_time::Float64,
@@ -682,50 +760,50 @@ function SC(;
     mult1::Vector{<:Integer},
     mult2::Vector{<:Integer},
     output_folder::Union{String,Nothing}=nothing,
+    Nbatch::Int=10000,
 )::Dict{Float64,Dict{String,Vector{Float64}}}
     N = N_samples
     time_ns = 0:dt:simulation_time
     dt = dt * abs(γe)
     T = simulation_time * abs(γe)
-    nsteps = size(time_ns)[1]
+    nsteps = length(time_ns)
     C = C_from(J, D)
     solver = (C ≈ zeros(3, 3) && kS == kT) ? :SC1 : (kS == kT ? :SC2 : :SC3)
     results = Dict{Float64,Dict{String,Vector{Float64}}}()
+
     for B0 in B
-        ω1 = [0.0, 0.0, B0]
+        ω1 = [0.0, 0.0, B0];
         ω2 = [0.0, 0.0, B0]
-        # Nuclear Zeeman frequencies (rescaled by |γe|): -B0 * γ_n / |γe|
         ω1n = build_nuclear_omegas(B0, mult1)
         ω2n = build_nuclear_omegas(B0, mult2)
         A1 = arrays_to_smatrices(a1)
         A2 = arrays_to_smatrices(a2)
-        # Convert nuclear spin multiplicities m to spin quantum numbers I = (m-1)/2
         qn1 = multiplicities_to_I(mult1)
         qn2 = multiplicities_to_I(mult2)
 
         p = SCParams(
-            A1, # Hyperfine coupling tensor (mT)
-            A2, # Hyperfine coupling tensor (mT)
-            C,  # Dipolar + Exchange coupling tensor (mT)
-            SVector{3,Float64}(ω1...), # Electron Zeeman frequency (mT)
-            SVector{3,Float64}(ω2...), # Electron Zeeman frequency (mT)
-            ω1n, # Nuclear Zeeman frequencies (mT)
-            ω2n, # Nuclear Zeeman frequencies (mT)
-            kS * 1e-03 / abs(γe), # μs⁻¹ => ns⁻¹ / |γe|
-            kT * 1e-03 / abs(γe), # μs⁻¹ => ns⁻¹ / |γe|
-            qn1, # Nuclear spin multiplicities
-            qn2, # Nuclear spin multiplicities
+            A1,
+            A2,
+            C,
+            SVector{3,Float64}(ω1...),
+            SVector{3,Float64}(ω2...),
+            ω1n,
+            ω2n,
+            kS * 1e-03 / abs(γe),
+            kT * 1e-03 / abs(γe),
+            qn1,
+            qn2,
         )
 
-        u0 = assemble_initial_state(solver, p; seed=123)
+        u0 = assemble_initial_state(solver, p)
         if solver == :SC1
             println("Using SC1 solver (6 variables for electrons)")
             prob = ODEProblem(SC1!, u0, (0.0, T), p)
             eprob = EnsembleProblem(prob; output_func=output_func1, prob_func=prob_func1)
         elseif solver == :SC2
             println("Using SC2 solver (15 variables for electrons)")
-            # prob = ODEProblem(SC2!, u0, (0.0, simulation_time * abs(γe)), p)
-            prob = ODEProblem(SC2_naive!, u0, (0.0, T), p)
+            # prob = ODEProblem(SC2_naive!, u0, (0.0, T), p)
+            prob = ODEProblem(SC2!, u0, (0.0, T), p)
             eprob = EnsembleProblem(prob; output_func=output_func2, prob_func=prob_func2)
         else
             println("Using SC3 solver (16 variables for electrons)")
@@ -733,9 +811,64 @@ function SC(;
             eprob = EnsembleProblem(prob; output_func=output_func3, prob_func=prob_func3)
         end
 
-        # data = solve(eprob, EnsembleDistributed(); dt=dt, saveat=0.0:dt:simulation_time, trajectories=N)
-        data = solve(eprob; dt=dt, saveat=0.0:dt:T, trajectories=N)
-        t, μ_tp, μ_t0, μ_s, μ_tm, se_tp, se_t0, se_s, se_tm = average_ensemble(data)
+        # --- single-shot (default) keeps old behavior
+        if Nbatch >= N
+            data = solve(eprob; dt=dt, saveat=0.0:dt:T, trajectories=N)
+            t, μ_tp, μ_t0, μ_s, μ_tm, se_tp, se_t0, se_s, se_tm = average_ensemble(data)
+            results[B0] = Dict(
+                "T+" => μ_tp,
+                "T0" => μ_t0,
+                "S" => μ_s,
+                "T-" => μ_tm,
+                "se_T+" => se_tp,
+                "se_T0" => se_t0,
+                "se_S" => se_s,
+                "se_T-" => se_tm,
+                "time_ns" => t / abs(γe),
+            )
+            continue
+        end
+
+        # --- streamed/batched evaluation
+        rs_tp = RunningStats(nsteps)
+        rs_t0 = RunningStats(nsteps)
+        rs_s = RunningStats(nsteps)
+        rs_tm = RunningStats(nsteps)
+
+        remaining = N
+        first = true
+        time_out = nothing
+
+        while remaining > 0
+            b = min(Nbatch, remaining)
+            data = solve(eprob; dt=dt, saveat=0.0:dt:T, trajectories=b)
+            t, μ_tp_b, μ_t0_b, μ_s_b, μ_tm_b, se_tp_b, se_t0_b, se_s_b, se_tm_b = average_ensemble(
+                data
+            )
+
+            if first
+                time_out = t / abs(γe)
+                first = false
+            end
+
+            update!(rs_tp, b, μ_tp_b, batch_M2_from_se(se_tp_b, b))
+            update!(rs_t0, b, μ_t0_b, batch_M2_from_se(se_t0_b, b))
+            update!(rs_s, b, μ_s_b, batch_M2_from_se(se_s_b, b))
+            update!(rs_tm, b, μ_tm_b, batch_M2_from_se(se_tm_b, b))
+
+            remaining -= b
+            z = 1.959963984540054 # quantile(Normal(), 0.975)
+            mean_se_s = mean(se(rs_s.M2, rs_s.count); dims=1)[1] * z
+            println(
+                "$(Dates.now()) Completed $(N - remaining) trajectories ($((N - remaining) / N * 100)%): ΔPs(95%) = $(mean_se_s)",
+            )
+        end
+
+        μ_tp, se_tp = finalize(rs_tp)
+        μ_t0, se_t0 = finalize(rs_t0)
+        μ_s, se_s = finalize(rs_s)
+        μ_tm, se_tm = finalize(rs_tm)
+
         results[B0] = Dict(
             "T+" => μ_tp,
             "T0" => μ_t0,
@@ -745,7 +878,7 @@ function SC(;
             "se_T0" => se_t0,
             "se_S" => se_s,
             "se_T-" => se_tm,
-            "time_ns" => t / abs(γe),
+            "time_ns" => time_out,
         )
     end
 
@@ -753,7 +886,6 @@ function SC(;
         output_folder = joinpath(output_folder, "SC")
         save_results(results, output_folder)
     end
-
     return results
 end
 
