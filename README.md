@@ -43,6 +43,18 @@ julia --project=.. --threads 4 tutorial.jl
 
 6. (optional) You can perform simulation without input file. See function such `SC` and `SW`.
 
+7. (optional) The results are exported in HDF format. You can access the data by Python
+
+```python
+import h5py
+f = h5py.File('example/SC/results.h5', 'r')
+B005_SC_Tp = f['B=0.05']['T+'][:]
+B005_SC_T0 = f['B=0.05']['T0'][:]
+B005_SC_S = f['B=0.05']['S'][:]
+B005_SC_Tm = f['B=0.05']['T-'][:]
+B005_SC_time = f['B=0.05']['time_ns'][:]
+```
+
 Input file is [example/input.ini](example/input.ini).
 
 ## Input file
