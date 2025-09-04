@@ -9,8 +9,10 @@ module Utils
 using StaticArrays
 using Distributions: Uniform
 using Random
+using HDF5
 
-export vecparse, mat3, mat3static, clean!, clean, sample_from_sphere, sphere_to_cartesian
+export vecparse,
+    mat3, mat3static, clean!, clean, sample_from_sphere, sphere_to_cartesian, read_results
 
 """
     vecparse(T, s::AbstractString) → Vector{T}
@@ -97,6 +99,59 @@ function sphere_to_cartesian(
     y = sin.(θ) .* sin.(ϕ)
     z = cos.(θ)
     return x, y, z
+end
+
+"""
+    read_results(path::AbstractString) → Dict{Float64,Dict{String,Vector{Float64}}}
+
+"""
+function read_results(path::AbstractString)::Dict{Float64,Dict{String,Vector{Float64}}}
+    fpath = isdir(path) ? joinpath(path, "results.h5") : path
+    results = Dict{Float64,Dict{String,Vector{Float64}}}()
+    h5open(fpath, "r") do file
+        # B value list
+        B_list = if haskey(file, "B")
+            sort(Vector{Float64}(read(file["B"])))
+        else
+            # fallback: estimate from root group name
+            candidates = String.(collect(keys(file)))
+            parsed = Float64[]
+            for name in candidates
+                if startswith(name, "B=")
+                    push!(parsed, parse(Float64, split(name, "=")[2]))
+                end
+            end
+            sort(parsed)
+        end
+
+        for B0 in B_list
+            # default group name
+            gname = "B=$(B0)"
+            # handle floating point string representation differences
+            if !haskey(file, gname)
+                candidates = String.(collect(keys(file)))
+                match_idx = findfirst(
+                    n ->
+                        startswith(n, "B=") &&
+                        isapprox(parse(Float64, split(n, "=")[2]), B0; atol=1e-12, rtol=0),
+                    candidates,
+                )
+                gname = match_idx === nothing ? gname : candidates[match_idx]
+            end
+            if !haskey(file, gname)
+                continue
+            end
+
+            g = file[gname]
+            inner = Dict{String,Vector{Float64}}()
+            for dname in keys(g)
+                data = read(g[dname])
+                inner[String(dname)] = Vector{Float64}(data)
+            end
+            results[B0] = inner
+        end
+    end
+    return results
 end
 
 end # module

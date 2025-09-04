@@ -122,19 +122,19 @@ function SchultenWolynes_hamiltonian(
     @assert is_isotropic(mol1.A) "mol1 must be isotropic"
     @assert is_isotropic(mol2.A) "mol2 must be isotropic"
     # return SchultenWolynes_hamiltonian(Aiso(mol1.A), Aiso(mol2.A), mol1.I, mol2.I, N)
-    return SchultenWolynes_hamiltonian(mol1.A, mol2.A, mol1.I, mol2.I, N)
+    return SchultenWolynes_hamiltonian(mol1.A, mol2.A, mol1.mult, mol2.mult, N)
 end
 
 function SchultenWolynes_hamiltonian(
     a1::Union{Vector{Float64},Array{Float64,3}},
     a2::Union{Vector{Float64},Array{Float64,3}},
-    I1::Vector{<:Integer},
-    I2::Vector{<:Integer},
+    mult1::Vector{<:Integer},
+    mult2::Vector{<:Integer},
     N::Integer,
 )::Vector{SMatrix{4,4,ComplexF64}}
     @assert N ≥ 1 "N must be at least 1"
-    Ix1, Iy1, Iz1 = SW_each(a1, I1, N)
-    Ix2, Iy2, Iz2 = SW_each(a2, I2, N)
+    Ix1, Iy1, Iz1 = SW_each(a1, mult1, N)
+    Ix2, Iy2, Iz2 = SW_each(a2, mult2, N)
     Hsw = []
     for i in 1:N
         Hsw1 = -(Ix1[i] .* Sx1 .+ Iy1[i] .* Sy1 .+ Iz1[i] .* Sz1)
@@ -145,11 +145,13 @@ function SchultenWolynes_hamiltonian(
 end
 
 function SW_each(
-    a::Vector{Float64}, I::Vector{<:Integer}, N::Integer
+    a::Vector{Float64}, mult::Vector{<:Integer}, N::Integer
 )::Tuple{Vector{Float64},Vector{Float64},Vector{Float64}}
     @assert N ≥ 1 "N must be at least 1"
-    @assert length(a) == length(I) "a and I must have the same length"
+    @assert length(a) == length(mult) "a and I must have the same length"
 
+    # m = 2I + 1 => I = (m-1)/2
+    I = (Float64.(mult) .- 1.0) ./ 2.0
     τ = 6.0 / sum((a .^ 2) .* I .* (I .+ 1))
 
     # Smaple from f(x) = (τ²/4π)^(3/2) exp(-I²τ^2/4)
@@ -166,17 +168,19 @@ function SW_each(
 end
 
 function SW_each(
-    A::Array{Float64,3}, I::Vector{<:Integer}, N::Integer
+    A::Array{Float64,3}, mult::Vector{<:Integer}, N::Integer
 )::Tuple{Vector{Float64},Vector{Float64},Vector{Float64}}
     N_nuc = size(A, 1)
     @assert size(A) == (N_nuc, 3, 3) "A must be a N_nuc×3×3 matrix but got $(size(A))"
-    θ, ϕ = sample_from_sphere((N, N_nuc))
+    θ, ϕ = sample_from_sphere((Int(N), N_nuc))
     # Unit vector on the sphere: x = sinθ cosϕ, y = sinθ sinϕ, z = cosθ
     ux, uy, uz = sphere_to_cartesian(θ, ϕ)  # (N, N_nuc)
     @assert size(ux) == (N, N_nuc) "ux must be a N×N_nuc matrix but got $(size(ux))"
     @assert size(uy) == (N, N_nuc) "uy must be a N×N_nuc matrix but got $(size(uy))"
     @assert size(uz) == (N, N_nuc) "uz must be a N×N_nuc matrix but got $(size(uz))"
 
+    # m = 2I + 1 => I = (m-1)/2
+    I = (Float64.(mult) .- 1.0) ./ 2.0
     vector_length = sqrt.(I .* (I .+ 1))  # (N_nuc,)
 
     Ix = zeros(Float64, N)

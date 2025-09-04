@@ -2,19 +2,18 @@ module MoleculeModule
 
 using IniFile
 using ..Utils
-using LinearAlgebra: tr, diagm
+using LinearAlgebra: tr, diagm, issymmetric
 
 """Typed container for one electron subsystem."""
 
 struct Molecule{T<:Integer}
     """
     g::Float64                 # Landé g-factor (current implementation assumes g = 2.002_319_304_362_56 in any case)
-    I::Vector{T}               # nuclear spins (any integer type)
+    mult::Vector{T}               # nuclear spin multiplicities (any integer type)
     A::Array{Float64, 3}       # coupling tensors  (size    N × 3 × 3)
-    mults::Vector{Int}         # multiplicities
     """
     g::Float64                 # Landé g-factor
-    I::Vector{T}               # nuclear spins
+    mult::Vector{T}               # nuclear spin multiplicities
     A::Array{Float64,3}       # coupling tensors  (size    N × 3 × 3)
 end
 
@@ -55,7 +54,7 @@ function read_molecule(cfg::IniFile.Inifile, section::AbstractString)::Molecule
     g = parse(Float64, get(cfg, section, "g", "NaN"))
     NI = vecparse(UInt, get(cfg, section, "N_I", ""))
     @assert allequal(NI, 1)
-    I = vecparse(Int, get(cfg, section, "I", ""))  # Use Int as default integer type
+    mult = vecparse(Int, get(cfg, section, "I", ""))  # Use Int as default integer type
 
     N = length(NI)                                 # number of nuclei
     A = Array{Float64,3}(undef, N, 3, 3)
@@ -69,7 +68,10 @@ function read_molecule(cfg::IniFile.Inifile, section::AbstractString)::Molecule
         end
     end
 
-    return Molecule(g, I, A)
+    if !all(issymmetric(A[k, :, :]) for k in 1:N)
+        println("WARNING: Non symmetric A (such as including SOC) is not debugged yet")
+    end
+    return Molecule(g, mult, A)
 end
 
 export Molecule, read_molecule, Aiso, is_isotropic

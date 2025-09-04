@@ -134,8 +134,8 @@ import ElectronSpinDynamics.SpinOps
         ttotal = 0.1
         dtns = 0.01
         Bvec = [0.0]
-        I1 = [2]   # m=2 -> H
-        I2 = [3]   # m=3 -> N
+        m1 = [2]   # m=2 -> H
+        m2 = [3]   # m=3 -> N
 
         @testset "(1) kS=kT, C==0, A==0" begin
             res = SC(;
@@ -150,8 +150,8 @@ import ElectronSpinDynamics.SpinOps
                 kT=1.0,
                 a1=zero_A(1),
                 a2=zero_A(1),
-                I1=I1,
-                I2=I2,
+                mult1=m1,
+                mult2=m2,
             )
             @test haskey(res, Bvec[1])
             S = res[Bvec[1]]["S"]
@@ -172,8 +172,8 @@ import ElectronSpinDynamics.SpinOps
                 kT=1.0,
                 a1=zero_A(1),
                 a2=zero_A(1),
-                I1=I1,
-                I2=I2,
+                mult1=m1,
+                mult2=m2,
             )
             @test haskey(res, 1.0)
             S = res[1.0]["S"]
@@ -194,8 +194,8 @@ import ElectronSpinDynamics.SpinOps
                 kT=2.0,
                 a1=zero_A(1),
                 a2=zero_A(1),
-                I1=I1,
-                I2=I2,
+                mult1=m1,
+                mult2=m2,
             )
             @test haskey(res, 1.0)
             S = res[1.0]["S"]
@@ -220,8 +220,8 @@ import ElectronSpinDynamics.SpinOps
                 kT=1.1,
                 a1=Aarb1,
                 a2=Aarb2,
-                I1=I1,
-                I2=I2,
+                mult1=m1,
+                mult2=m2,
             )
             @test haskey(res, 2.0)
             S = res[2.0]["S"]

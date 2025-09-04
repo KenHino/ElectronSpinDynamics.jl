@@ -2,6 +2,7 @@ module SystemModule
 
 using IniFile, StaticArrays
 using ..Utils: mat3static
+using LinearAlgebra: issymmetric
 
 struct System
     J::Float64            # exchange coupling (scalar)
@@ -17,6 +18,10 @@ function read_system(cfg::IniFile.Inifile)::System
     D = mat3static(get(cfg, sec, "D", ""))
     kS = parse(Float64, get(cfg, sec, "kS", "NaN"))
     kT = parse(Float64, get(cfg, sec, "kT", "NaN"))
+
+    if !issymmetric(D)
+        println("WARNING: Non symmetric D has not been debugged yet")
+    end
 
     return System(J, D, kS, kT)
 end
