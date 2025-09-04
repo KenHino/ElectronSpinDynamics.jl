@@ -86,18 +86,6 @@ N_I = 1 1 1 1 1 1 1 1 1 1 1
 A1 = 0.5141406139911681 0.0 0.0 0.0 0.5141406139911681 0.0 0.0 0.0 0.5141406139911681
 A2 = -0.13706792618414612 -0.0 -0.0 -0.0 -0.13706792618414612 -0.0 -0.0 -0.0 -0.13706792618414612
 A3 = -0.13706792618414612 -0.0 -0.0 -0.0 -0.13706792618414612 -0.0 -0.0 -0.0 -0.13706792618414612
-- `output_folder`: Output folder
-- `seed`: Random seed
-- `simulation_type`: Simulation type
-- `B`: Magnetic field in mT
-- `initial_state`: Initial state
-- `simulation_time`: Simulation time in μs
-- `dt`: Time step in μs
-- `N_krylov`: Number of Krylov vectors
-- `integrator_tolerance`: Integrator tolerance
-- `N_samples`: Number of samples
-- `output_folder`: Output folder
-- `seed`: Random seed
 A4 = -0.13706792618414612 -0.0 -0.0 -0.0 -0.13706792618414612 -0.0 -0.0 -0.0 -0.13706792618414612
 A5 = -0.44033852832217035 -0.0 -0.0 -0.0 -0.44033852832217035 -0.0 -0.0 -0.0 -0.44033852832217035
 A6 = 0.4546400686867858 0.0 0.0 0.0 0.4546400686867858 0.0 0.0 0.0 0.4546400686867858
