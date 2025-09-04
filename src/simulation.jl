@@ -15,6 +15,7 @@ using DifferentialEquations: ODEProblem, solve, EnsembleProblem, EnsembleDistrib
 using ..Utils: sample_from_sphere, sphere_to_cartesian
 using HDF5
 using Dates
+using Printf
 
 function each_process_SW(
     nsteps::Integer,
@@ -172,7 +173,7 @@ function SW(;
             z = 1.959963984540054 # quantile(Normal(), 0.975)
             mean_se_s = mean(se(rs_s.M2, rs_s.count); dims=1)[1] * z
             println(
-                "$(Dates.now()) Completed $(N - remaining) trajectories ($((N - remaining) / N * 100)%): ΔPs(95%) = $(mean_se_s)",
+                "$(Dates.format(Dates.now(), "HH:MM:SS")) Completed $(N - remaining) trajectories ($(Printf.@sprintf("%.3f", (N - remaining) / N * 100))%): ΔPs(95%) = $(Printf.@sprintf("%.3e", mean_se_s))",
             )
         end
 
@@ -860,7 +861,7 @@ function SC(;
             z = 1.959963984540054 # quantile(Normal(), 0.975)
             mean_se_s = mean(se(rs_s.M2, rs_s.count); dims=1)[1] * z
             println(
-                "$(Dates.now()) Completed $(N - remaining) trajectories ($((N - remaining) / N * 100)%): ΔPs(95%) = $(mean_se_s)",
+                "$(Dates.format(Dates.now(), "HH:MM:SS")) Completed $(N - remaining) trajectories ($(Printf.@sprintf("%.3f", (N - remaining) / N * 100))%): ΔPs(95%) = $(Printf.@sprintf("%.3e", mean_se_s))",
             )
         end
 
