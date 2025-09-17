@@ -82,7 +82,7 @@ end
 
 function dipolar_hamiltonian(D::Float64)::SMatrix{4,4,ComplexF64}
     @assert D ≤ 0 "D must be non-positive under point-dipole approximation"
-    Dtensor = diagm(0 => [2D/3, 2D/3, -4D/3])
+    Dtensor = diagm(0 => [-2D/3, -2D/3, 4D/3])
     return dipolar_hamiltonian(Dtensor)
 end
 
@@ -137,8 +137,8 @@ function SchultenWolynes_hamiltonian(
     Ix2, Iy2, Iz2 = SW_each(a2, mult2, N)
     Hsw = []
     for i in 1:N
-        Hsw1 = -(Ix1[i] .* Sx1 .+ Iy1[i] .* Sy1 .+ Iz1[i] .* Sz1)
-        Hsw2 = -(Ix2[i] .* Sx2 .+ Iy2[i] .* Sy2 .+ Iz2[i] .* Sz2)
+        Hsw1 = (Ix1[i] .* Sx1 .+ Iy1[i] .* Sy1 .+ Iz1[i] .* Sz1)
+        Hsw2 = (Ix2[i] .* Sx2 .+ Iy2[i] .* Sy2 .+ Iz2[i] .* Sz2)
         push!(Hsw, SMatrix{4,4,ComplexF64}(Hsw1 .+ Hsw2))
     end
     return Hsw

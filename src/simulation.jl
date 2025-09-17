@@ -651,9 +651,9 @@ end
 
 function C_from(J::Float64, D::Float64)::SMatrix{3,3,Float64}
     @assert D ≤ 0 "D must be non-positive under point-dipole approximation"
-    Dtensor = diagm(0 => [2D/3, 2D/3, -4D/3])
-    Cmat = Dtensor + 2.0 * J * I(3)
-    C = SMatrix{3,3,Float64}(-Cmat)
+    Dtensor = diagm(0 => [-2D/3, -2D/3, 4D/3])
+    Cmat = Dtensor - 2.0 * J * I(3)
+    C = SMatrix{3,3,Float64}(Cmat)
     return C
 end
 
@@ -661,8 +661,8 @@ function C_from(J::Float64, D::AbstractMatrix{Float64})::SMatrix{3,3,Float64}
     @assert size(D) == (3, 3) "D must be a 3×3 matrix"
     @assert D == D' "D must be symmetric"
     Dtensor = D
-    Cmat = Dtensor + 2.0 * J * I(3)
-    C = SMatrix{3,3,Float64}(-Cmat)
+    Cmat = Dtensor - 2.0 * J * I(3)
+    C = SMatrix{3,3,Float64}(Cmat)
     return C
 end
 
