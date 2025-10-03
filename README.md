@@ -59,11 +59,15 @@ Input file is [example/input.ini](example/input.ini).
 
 ## Input file
 
+Hamiltonian
+<img width="1090" height="866" alt="image" src="https://github.com/user-attachments/assets/f0348962-a38e-4626-ab37-b2a482624280" />
+
+
 - `J`: Exchange coupling constant in mT (divided by absolute value of γe)
 - `D`: D tensor in mT
 - `kS`: Singlet rate constant in μs-1
 - `kT`: Triplet rate constant in μs-1
-- `I`: Multiplicity of the nuclei (not quantum numbers)
+- `I`: Multiplicity of the nuclei (not quantum numbers) when I=3, nucleus is nitrogen, when I=2, nucleus is hydrogen. other nuclei are not supported yet.
 - `An`: Nuclear hyperfine coupling constants in mT (asymmetric is not supported yet)
 - `out`: Output folder
 - `B`: Magnetic field in mT
