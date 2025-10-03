@@ -6,7 +6,7 @@ Schulten-Wolynes and Semiclassical electronic spin dynamics implemented by Julia
 [![Coverage](https://codecov.io/gh/KenHino/ElectronSpinDynamics.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/KenHino/ElectronSpinDynamics.jl)
 [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/JuliaDiff/BlueStyle)
 
-![](example/SC_error.png)
+[`DifferentialEquations.jl`](https://docs.sciml.ai/DiffEqDocs/stable/) is used for ensemble semiclassical simulation.
 
 ## Installation
 
@@ -43,9 +43,10 @@ julia --project=.. --threads 4 tutorial.jl
 
 6. (optional) You can perform simulation without input file. See function such `SC` and `SW`.
 
-7. (optional) The results are exported in HDF format. You can access the data by Python
+7. (optional) The results are exported in HDF format. You can access the data by Python (needless to say, Julia as well).
 
 ```python
+# Access results by Python
 import h5py
 f = h5py.File('example/SC/results.h5', 'r')
 B005_SC_Tp = f['B=0.05']['T+'][:]
@@ -121,3 +122,14 @@ N_krylov = 7
 integrator_tolerance = 1e-08
 N_samples = 1000000
 ```
+
+## References
+- SW theory:
+  `Schulten, Klaus, and Peter G. Wolynes. "Semiclassical description of electron spin motion in radicals including the effect of electron hopping." The Journal of Chemical Physics 68.7 (1978): 3292-3297.`
+- SC theory:
+  - w/o D and J:
+    `Manolopoulos, David E., and P. J. Hore. "An improved semiclassical theory of radical pair recombination reactions." The Journal of chemical physics 139.12 (2013).`
+  - with kS != kT:
+    `Lewis, Alan M., David E. Manolopoulos, and P. J. Hore. "Asymmetric recombination and electron spin relaxation in the semiclassical theory of radical pair reactions." The Journal of Chemical Physics 141.4 (2014).`
+  - with D and J:
+    `Fay, Thomas P., et al. "How quantum is radical pair magnetoreception?." Faraday discussions 221 (2020): 77-91.`
